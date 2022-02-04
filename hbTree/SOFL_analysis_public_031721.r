@@ -30,7 +30,7 @@ library(wesanderson)
 ##################################
 #set working directory where core file is kept
 
-setwd('C:/Aworkspace/Frankenlog/Dec_2020_Data_Analysis/')
+setwd('~/TreeApp/S22-Tree-App/hbTree/treedata/')
 
 
 #bring all data together
