@@ -30,7 +30,7 @@ library(wesanderson)
 ##################################
 #set working directory where core file is kept
 
-setwd('~/TreeApp/S22-Tree-App/hbTree/treedata/')
+setwd("~/R/S22-Tree-App/hbTree/treedata")
 
 
 #bring all data together
@@ -77,6 +77,9 @@ All_logs$date2 <- substr(All_logs$datetime,1,10)
 All_logs$time2 <- substr(All_logs$datetime,12,19)
 All_logs$time3 <- str_replace(All_logs$time2,'00:00:00','00:00:01')
 All_logs$datetime2 <- paste(All_logs$date2,All_logs$time3,sep=" ")
+
+#Save All_logs to local csv
+write.csv(All_logs, "All_logs.csv")
 
 ###############################################
 # Pittsburg Reservoir NOAA 15-min data ########
