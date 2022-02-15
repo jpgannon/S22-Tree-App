@@ -30,24 +30,25 @@ library(wesanderson)
 ##################################
 #set working directory where core file is kept
 
-setwd("~/R/S22-Tree-App/hbTree/treedata")
+#setwd("~/R/S22-Tree-App/hbTree/treedata")
+setwd('~/TreeApp/S22-Tree-App/hbTree/treedata/')
 
 
 #bring all data together
-Log1 <- read.csv("Log 1 2020 Summer.csv", header = TRUE, check.names = FALSE)
+Log1 <- read_csv("Log 1 2020 Summer.csv",show_col_types = FALSE)
 Log1$'2m_VWC' <- as.numeric(Log1$'2m_VWC')
-Log2 <- read.csv("Log 2 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log3 <- read.csv("Log 3 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log4 <- read.csv("Log 4 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log5 <- read.csv("Log 5 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log6 <- read.csv("Log 6 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log7 <- read.csv("Log 7 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log8 <- read.csv("Log 8 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log9 <- read.csv("Log 9 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log10 <- read.csv("Log 10 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log11 <- read.csv("Log 11 2020 Summer.csv", header = TRUE, check.names = FALSE)
-Log12 <- read.csv("Log 12 2020 Summer.csv", header = TRUE, check.names = FALSE)
-All_logs <- bind_rows(Log1, Log2, Log3, Log4, Log5, Log6, Log7, Log8, Log9, Log10, Log11, Log12)
+Log2 <- read_csv("Log 2 2020 Summer.csv",show_col_types = FALSE)
+#Log3 <- read_csv("Log 3 2020 Summer.csv",show_col_types = FALSE)
+Log4 <- read_csv("Log 4 2020 Summer.csv",show_col_types = FALSE)
+Log5 <- read_csv("Log 5 2020 Summer.csv",show_col_types = FALSE)
+Log6 <- read_csv("Log 6 2020 Summer.csv",show_col_types = FALSE)
+Log7 <- read_csv("Log 7 2020 Summer.csv",show_col_types = FALSE)
+Log8 <- read_csv("Log 8 2020 Summer.csv",show_col_types = FALSE)
+Log9 <- read_csv("Log 9 2020 Summer.csv",show_col_types = FALSE)
+Log10 <- read_csv("Log 10 2020 Summer.csv",show_col_types = FALSE)
+Log11 <- read_csv("Log 11 2020 Summer.csv",show_col_types = FALSE)
+Log12 <- read_csv("Log 12 2020 Summer.csv",show_col_types = FALSE)
+All_logs <- bind_rows(Log1, Log2, Log4, Log5, Log6, Log7, Log8, Log9, Log10, Log11, Log12)
 
 #rename fields that start with a number...crashes a function later on
 names(All_logs)[names(All_logs) == "4m_VWC"] <- "VWC_4m"
@@ -78,8 +79,15 @@ All_logs$time2 <- substr(All_logs$datetime,12,19)
 All_logs$time3 <- str_replace(All_logs$time2,'00:00:00','00:00:01')
 All_logs$datetime2 <- paste(All_logs$date2,All_logs$time3,sep=" ")
 
+All_logs$datetime0 <- ymd_hms(All_logs$datetime2) ####
+
 #Save All_logs to local csv
 write.csv(All_logs, "All_logs.csv")
+
+
+
+
+
 
 ###############################################
 # Pittsburg Reservoir NOAA 15-min data ########
