@@ -74,8 +74,8 @@ shinyApp(ui = ui, server = server)
 
 
 
-
-
+#Insert NAs in areas where missing data exists
+#look for function select multiple
 
 
 
