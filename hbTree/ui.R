@@ -5,6 +5,7 @@ library(shiny)
 library(shinythemes)
 library(dplyr)
 library(readr)
+library(ggplot2)
 
 # Load data
 TREE_DATA <- read_csv("~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs.csv")
@@ -20,8 +21,9 @@ ui <- fluidPage(
       # Select type of trend to plot
       selectInput( 
         inputId = "type", label = strong("Select Log"),
-        choices = unique(TREE_DATA$Log), selected = "1"),
-      
+        choices = unique(TREE_DATA$Log), selected = "1",
+        multiple = TRUE),
+
       # Select variable to plot
       selectInput( 
         inputId = "var", label = strong("Select Variable"),
@@ -54,18 +56,26 @@ server <- function(input, output) {
     TREE_DATA$yvar <- TREE_DATA[[as.character(input$var)]]
     TREE_DATA %>%
       filter(
-        Log == input$type, #!is.na(yvar),
+        Log %in% input$type, #!is.na(yvar),
         datetime0 > as.POSIXct(input$datetime0[1])& datetime0 < as.POSIXct(input$datetime0[2])
       )
   })
   
   # Create scatterplot object the plotOutput function is expecting
   output$lineplot <- renderPlot({
-    color = "#434343"
-    par(mar = c(4, 4, 1, 1))
-    plot(x = selected_range()$datetime0, y = selected_range()$yvar, type = "l",
-         xlab = "Date", ylab = "___VARIABLE NAME___", col = color, 
-         fg = color, col.lab = color, col.axis = color)
+    ggplot(selected_range(), aes(x = datetime0, y = yvar, color = as.factor(Log)))+
+      geom_line()+
+      labs(title="Title\n",x="Date",y=as.character((input$var)),color="Log\n")+
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
+            axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
+            plot.title = element_text(size = 20, face = "bold", color = "darkgreen"))
+    
+    #color = "#434343"
+    #par(mar = c(4, 4, 1, 1))
+    # plot(x = selected_range()$datetime0, y = selected_range()$yvar, type = "l",
+    #      xlab = "Date", ylab = "___VARIABLE NAME___", col = color, 
+    #      fg = color, col.lab = color, col.axis = color)
   })
 }
 
