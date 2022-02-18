@@ -1,4 +1,6 @@
 # Made by Cole Jackson
+# kelvin was here
+# trey was also here
 
 # Load packages
 library(shiny)
