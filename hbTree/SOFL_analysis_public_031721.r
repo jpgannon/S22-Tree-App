@@ -39,7 +39,7 @@ if (TRUE) {
   Log1 <- read_csv("Log 1 2020 Summer.csv",show_col_types = FALSE)
   Log1$'2m_VWC' <- as.numeric(Log1$'2m_VWC')
   Log2 <- read_csv("Log 2 2020 Summer.csv",show_col_types = FALSE)
-  Log3 <- read_csv("hbTree/treedata/Log 3 2020 summer.csv", col_types = cols(date = col_datetime(format = "%m/%d/%Y %H:%M")))
+  Log3 <- read_csv("Log 3 2020 summer.csv", col_types = cols(date = col_datetime(format = "%m/%d/%Y %H:%M")))
   Log4 <- read_csv("Log 4 2020 Summer.csv",show_col_types = FALSE)
   Log5 <- read_csv("Log 5 2020 Summer.csv",show_col_types = FALSE)
   Log6 <- read_csv("Log 6 2020 Summer.csv",show_col_types = FALSE)
