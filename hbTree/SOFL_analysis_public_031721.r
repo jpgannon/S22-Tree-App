@@ -8,83 +8,84 @@
 
 #install.packages("hydroTSM")
 
-library(tidyr)
-library(dplyr)
-library(plyr)
-library(stringi)
-library(gtools)
-library(tidyverse)
-library(RColorBrewer)
-library(ggplot2)
-library(tidyr)
-library(forcats)
-library(viridis)
-library(ggridges)
-library(ggthemes)
-library(ggpubr)
-library(BSDA)
-library(lubridate)
-library(hydroTSM)
-library(wesanderson)
+if (TRUE) {
+  library(tidyr)
+  library(dplyr)
+  library(plyr)
+  library(stringi)
+  library(gtools)
+  library(tidyverse)
+  library(RColorBrewer)
+  library(ggplot2)
+  library(tidyr)
+  library(forcats)
+  library(viridis)
+  library(ggridges)
+  library(ggthemes)
+  library(ggpubr)
+  library(BSDA)
+  library(lubridate)
+  library(hydroTSM)
+  library(wesanderson)
+  
+  ##################################
+  #set working directory where core file is kept
+  
+  #setwd("~/R/S22-Tree-App/hbTree/treedata")
+  setwd('~/TreeApp/S22-Tree-App/hbTree/treedata/')
+  
+  
+  #bring all data together
+  Log1 <- read_csv("Log 1 2020 Summer.csv",show_col_types = FALSE)
+  Log1$'2m_VWC' <- as.numeric(Log1$'2m_VWC')
+  Log2 <- read_csv("Log 2 2020 Summer.csv",show_col_types = FALSE)
+  #Log3 <- read_csv("Log 3 2020 Summer.csv",show_col_types = FALSE)
+  Log4 <- read_csv("Log 4 2020 Summer.csv",show_col_types = FALSE)
+  Log5 <- read_csv("Log 5 2020 Summer.csv",show_col_types = FALSE)
+  Log6 <- read_csv("Log 6 2020 Summer.csv",show_col_types = FALSE)
+  Log7 <- read_csv("Log 7 2020 Summer.csv",show_col_types = FALSE)
+  Log8 <- read_csv("Log 8 2020 Summer.csv",show_col_types = FALSE)
+  Log9 <- read_csv("Log 9 2020 Summer.csv",show_col_types = FALSE)
+  Log10 <- read_csv("Log 10 2020 Summer.csv",show_col_types = FALSE)
+  Log11 <- read_csv("Log 11 2020 Summer.csv",show_col_types = FALSE)
+  Log12 <- read_csv("Log 12 2020 Summer.csv",show_col_types = FALSE)
+  All_logs <- bind_rows(Log1, Log2, Log4, Log5, Log6, Log7, Log8, Log9, Log10, Log11, Log12)
+  
+  #rename fields that start with a number...crashes a function later on
+  names(All_logs)[names(All_logs) == "4m_VWC"] <- "VWC_4m"
+  names(All_logs)[names(All_logs) == "2m_VWC"] <- "VWC_2m"
+  names(All_logs)[names(All_logs) == "6m_VWC"] <- "VWC_6m"
+  names(All_logs)[names(All_logs) == "6m_log_temp"] <- "log_temp_6m"
+  names(All_logs)[names(All_logs) == "4m_log_temp"] <- "log_temp_4m"
+  names(All_logs)[names(All_logs) == "2m_log_temp"] <- "log_temp_2m"
+  
+  #Create New Variables
+  All_logs$Avg_log_vwc <- rowMeans(subset(All_logs,select = c('VWC_2m', 'VWC_4m','VWC_6m'), na.rm = TRUE))
+  All_logs$Avg_log_temp <- rowMeans(subset(All_logs,select = c('log_temp_2m', 'log_temp_4m','log_temp_6m'), na.rm = TRUE))
+  All_logs$up_matric <- All_logs$up_matric*(-1)
+  All_logs$down_matric <- All_logs$down_matric*(-1)
+  
+  #More data cleaning to remove null VP and airtemp and log attributes
+  All_logs <- subset(All_logs,VP != 'NA'|air_temp !='NA'| battery>0 | Avg_log_vwc !='NA')
+  
+  #Calculate vpd:   y1 = ... # T [deg C]    y2 = ... # RH
+  All_logs$vpsat <- (6.112*exp((17.67*All_logs$air_temp)/(All_logs$air_temp+243.5)))*0.1 # [kPa]
+  All_logs$vp <- All_logs$vpsat * (All_logs$RH/100)
+  All_logs$vpd <- All_logs$vpsat - All_logs$vp
+  
+  # Take apart datetime stamp and replace midnight with one second past midnight
+  All_logs$datetime <- as.character(All_logs$date)
+  All_logs$date2 <- substr(All_logs$datetime,1,10)
+  All_logs$time2 <- substr(All_logs$datetime,12,19)
+  All_logs$time3 <- str_replace(All_logs$time2,'00:00:00','00:00:01')
+  All_logs$datetime2 <- paste(All_logs$date2,All_logs$time3,sep=" ")
+  
+  All_logs$datetime0 <- ymd_hms(All_logs$datetime2) ####
+  
+  #Save All_logs to local csv
+  write.csv(All_logs, "All_logs.csv")
 
-##################################
-#set working directory where core file is kept
-
-#setwd("~/R/S22-Tree-App/hbTree/treedata")
-setwd('~/TreeApp/S22-Tree-App/hbTree/treedata/')
-
-
-#bring all data together
-Log1 <- read_csv("Log 1 2020 Summer.csv",show_col_types = FALSE)
-Log1$'2m_VWC' <- as.numeric(Log1$'2m_VWC')
-Log2 <- read_csv("Log 2 2020 Summer.csv",show_col_types = FALSE)
-#Log3 <- read_csv("Log 3 2020 Summer.csv",show_col_types = FALSE)
-Log4 <- read_csv("Log 4 2020 Summer.csv",show_col_types = FALSE)
-Log5 <- read_csv("Log 5 2020 Summer.csv",show_col_types = FALSE)
-Log6 <- read_csv("Log 6 2020 Summer.csv",show_col_types = FALSE)
-Log7 <- read_csv("Log 7 2020 Summer.csv",show_col_types = FALSE)
-Log8 <- read_csv("Log 8 2020 Summer.csv",show_col_types = FALSE)
-Log9 <- read_csv("Log 9 2020 Summer.csv",show_col_types = FALSE)
-Log10 <- read_csv("Log 10 2020 Summer.csv",show_col_types = FALSE)
-Log11 <- read_csv("Log 11 2020 Summer.csv",show_col_types = FALSE)
-Log12 <- read_csv("Log 12 2020 Summer.csv",show_col_types = FALSE)
-All_logs <- bind_rows(Log1, Log2, Log4, Log5, Log6, Log7, Log8, Log9, Log10, Log11, Log12)
-
-#rename fields that start with a number...crashes a function later on
-names(All_logs)[names(All_logs) == "4m_VWC"] <- "VWC_4m"
-names(All_logs)[names(All_logs) == "2m_VWC"] <- "VWC_2m"
-names(All_logs)[names(All_logs) == "6m_VWC"] <- "VWC_6m"
-names(All_logs)[names(All_logs) == "6m_log_temp"] <- "log_temp_6m"
-names(All_logs)[names(All_logs) == "4m_log_temp"] <- "log_temp_4m"
-names(All_logs)[names(All_logs) == "2m_log_temp"] <- "log_temp_2m"
-
-#Create New Variables
-All_logs$Avg_log_vwc <- rowMeans(subset(All_logs,select = c('VWC_2m', 'VWC_4m','VWC_6m'), na.rm = TRUE))
-All_logs$Avg_log_temp <- rowMeans(subset(All_logs,select = c('log_temp_2m', 'log_temp_4m','log_temp_6m'), na.rm = TRUE))
-All_logs$up_matric <- All_logs$up_matric*(-1)
-All_logs$down_matric <- All_logs$down_matric*(-1)
-
-#More data cleaning to remove null VP and airtemp and log attributes
-All_logs <- subset(All_logs,VP != 'NA'|air_temp !='NA'| battery>0 | Avg_log_vwc !='NA')
-
-#Calculate vpd:   y1 = ... # T [deg C]    y2 = ... # RH
-All_logs$vpsat <- (6.112*exp((17.67*All_logs$air_temp)/(All_logs$air_temp+243.5)))*0.1 # [kPa]
-All_logs$vp <- All_logs$vpsat * (All_logs$RH/100)
-All_logs$vpd <- All_logs$vpsat - All_logs$vp
-
-# Take apart datetime stamp and replace midnight with one second past midnight
-All_logs$datetime <- as.character(All_logs$date)
-All_logs$date2 <- substr(All_logs$datetime,1,10)
-All_logs$time2 <- substr(All_logs$datetime,12,19)
-All_logs$time3 <- str_replace(All_logs$time2,'00:00:00','00:00:01')
-All_logs$datetime2 <- paste(All_logs$date2,All_logs$time3,sep=" ")
-
-All_logs$datetime0 <- ymd_hms(All_logs$datetime2) ####
-
-#Save All_logs to local csv
-write.csv(All_logs, "All_logs.csv")
-
-
+}
 
 
 
