@@ -39,7 +39,7 @@ if (TRUE) {
   Log1 <- read_csv("Log 1 2020 Summer.csv",show_col_types = FALSE)
   Log1$'2m_VWC' <- as.numeric(Log1$'2m_VWC')
   Log2 <- read_csv("Log 2 2020 Summer.csv",show_col_types = FALSE)
-  #Log3 <- read_csv("Log 3 2020 Summer.csv",show_col_types = FALSE)
+  Log3 <- read_csv("hbTree/treedata/Log 3 2020 summer.csv", col_types = cols(date = col_datetime(format = "%m/%d/%Y %H:%M")))
   Log4 <- read_csv("Log 4 2020 Summer.csv",show_col_types = FALSE)
   Log5 <- read_csv("Log 5 2020 Summer.csv",show_col_types = FALSE)
   Log6 <- read_csv("Log 6 2020 Summer.csv",show_col_types = FALSE)
@@ -49,7 +49,7 @@ if (TRUE) {
   Log10 <- read_csv("Log 10 2020 Summer.csv",show_col_types = FALSE)
   Log11 <- read_csv("Log 11 2020 Summer.csv",show_col_types = FALSE)
   Log12 <- read_csv("Log 12 2020 Summer.csv",show_col_types = FALSE)
-  All_logs <- bind_rows(Log1, Log2, Log4, Log5, Log6, Log7, Log8, Log9, Log10, Log11, Log12)
+  All_logs <- bind_rows(Log1, Log2, Log3, Log4, Log5, Log6, Log7, Log8, Log9, Log10, Log11, Log12)
   
   #rename fields that start with a number...crashes a function later on
   names(All_logs)[names(All_logs) == "4m_VWC"] <- "VWC_4m"
