@@ -14,6 +14,10 @@ treedata <- TREE_DATA %>%
   select(!c(date,...1,...2,datetime,date2,time2,time3,datetime2))%>%
   pivot_longer(cols = !c(datetime0,station,Log,Canopy,Block,SilvTreat,LogTreat),names_to = "name",values_to = 'value')
 
+treedata <- treedata %>%
+  filter(!is.na(value))
+
+
 # Define UI
 ui <- fluidPage(theme = shinytheme("lumen"),
   tabsetPanel(
