@@ -8,6 +8,9 @@
 
 #install.packages("hydroTSM")
 
+#setwd("~/R/S22-Tree-App/hbTree/treedata")
+setwd('~/TreeApp/S22-Tree-App/hbTree/treedata/')
+
 if (TRUE) {
   library(tidyr)
   library(dplyr)
@@ -31,8 +34,7 @@ if (TRUE) {
   ##################################
   #set working directory where core file is kept
   
-  #setwd("~/R/S22-Tree-App/hbTree/treedata")
-  setwd('~/TreeApp/S22-Tree-App/hbTree/treedata/')
+
   
   
   #bring all data together
