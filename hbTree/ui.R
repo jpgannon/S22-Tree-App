@@ -33,7 +33,8 @@ treedata <- TREE_DATA %>%
                names_to = "name",values_to = 'value')
 
 TREE_DATA$Log <- as.factor(TREE_DATA$Log)
-treedata <- treedata %>% filter(!is.na(value))
+treedata$Log <- as.factor(treedata$Log)
+#treedata <- treedata %>% filter(!is.na(value))
 
 print('Done')
 
@@ -59,6 +60,10 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          sidebarPanel(
            
            # Select which Log(s) to plot
+           selectInput("independent", strong("Select Independent Variable"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
+           
+           selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
+           
            selectInput("logs", strong("Select Log(s)"),
                        choices = unique(treedata$Log), 
                        selected = unique(treedata$Log)[1], 
@@ -140,10 +145,10 @@ server <- function(input, output) {
   
   output$plot1 <- renderPlot({
     treedata %>% filter(Log %in% input$logs & name %in% input$var1 & daterange$x[1] < Datetime0 & Datetime0 < daterange$x[2]) %>%
-      ggplot(aes(x = Datetime0, y = value, color = as.factor(Log))) +
-      geom_line()+
+      ggplot(aes_string(x = 'Datetime0', y = 'value', color = as.character(input$independent))) +
+      geom_point()+
       theme_bw()+
-      labs(title="Title", x="Date", y=as.character((input$var1)), color="Log\n")+
+      labs(title="Title", x="Date", y=as.character((input$var1)), color=as.character(input$independent))+
       theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
             axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
             plot.title = element_text(size = 18, face = "bold", color = "black"))
@@ -172,6 +177,15 @@ server <- function(input, output) {
             axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
             plot.title = element_text(size = 18, face = "bold", color = "black"))
     
+  })
+  
+  outvar = reactive({
+    myvar = input$independent
+    unique(treedata[[myvar]])
+  })
+  
+  observe({
+    updateSelectInput(inputId = 'groups', choices = outvar())
   })
   
   observeEvent(input$date[1], {daterange$x[1] <- ymd(input$date[1])})
