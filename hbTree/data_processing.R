@@ -60,8 +60,8 @@ for (i in 1:length(file_list)){
   } else {
     temp_data <- read_csv(file_list[i])
   }
-  temp_data$file_source <- file_list[i]
   temp_data <- average_by_hour(temp_data)
+  temp_data$file_source <- file_list[i]
   all_logs <- bind_rows(all_logs, temp_data)
 }
 
