@@ -9,34 +9,86 @@ library(ggplot2)
 library(data.table)
 library(formulaic)
 
-# Load data
+insertNA_at_timejumps <- function(dataframe, sensorNumber, recordInterval, dateVarName) {
+  dataframe$date <- dataframe[[dateVarName]]
+  dataframe <- dataframe %>% 
+    filter(Log == sensorNumber) %>% 
+    arrange(date)
+  
+  time <- dataframe %>% select(date)
+  time <- rbind(time[-1,], time[nrow(time),] + recordInterval)
+  dataframe$Time_Lag <- as.double(time$date - dataframe$date)
+  
+  blanks <- dataframe %>% 
+    filter(Time_Lag > (recordInterval/3600)) %>%
+    select(date, station, Log, Canopy, Block, SilvTreat, LogTreat, Time_Lag)
+  blanks$date <- blanks$date + recordInterval
+  
+  new_df <- dataframe %>%
+    full_join(blanks,) %>% 
+    select(-c(Time_Lag))
+  
+  return(new_df)
+}
+
+insertNA_at_timejumps_all_logs <- function(dataframe, sensors, recordInterval, dateVarName) {
+  new_df = data.frame()
+  for (sensorNumber in 1:sensors) {
+    output_df <- 
+      insertNA_at_timejumps(
+        dataframe = dataframe,
+        sensorNumber = sensorNumber, 
+        recordInterval = recordInterval, 
+        dateVarName = dateVarName)
+    new_df <- 
+      rbind(new_df, output_df)
+  }
+  return(new_df)
+}
+
+clean_up_names <- function(dataframe) {
+  new_names <- c()
+  for (name in names(dataframe)) {
+    new_name <- ''
+    for (word in strsplit(name,'_')[[1]]) {
+      new_word <- paste(toupper(substr(word,1,1)), substr(word,2,100), sep = '')
+      new_name <- paste(new_name, new_word)
+      new_name <- trimws(new_name)
+    }
+    new_names <- c(new_names, new_name)
+  }
+  setnames(dataframe, old = names(dataframe), new = new_names)
+  return(dataframe)
+}
+
+pivot_clean <- function(dataframe) {
+  new_df <- dataframe %>%
+    select(-c(...1, ...2, FileSource)) %>% 
+    pivot_longer(cols = !c(Date, Station, Log, Canopy, Block, SilvTreat, LogTreat),
+                 names_to = "name",values_to = 'value')
+  return(new_df)
+}
+
+
+
 TREE_DATA <- read_csv("~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs.csv")
 
-new_names <- c()
-for (name in names(TREE_DATA)) {
-  new_name <- ''
-  for (word in strsplit(name,'_')[[1]]) {
-    new_word <- paste(toupper(substr(word,1,1)), substr(word,2,100), sep = '')
-    new_name <- paste(new_name, new_word)
-    if (word == 'vwc') {
-      new_name <- 'VWC'
-    }
-    new_name <- trimws(new_name)
-  }
-  new_names <- c(new_names, new_name)
-}
-setnames(TREE_DATA, old = names(TREE_DATA), new = new_names)
+TREE_DATA <- insertNA_at_timejumps_all_logs(dataframe = TREE_DATA, sensors = 12,
+                                            recordInterval = 3600, dateVarName = 'date')
+TREE_DATA <- clean_up_names(TREE_DATA)
 
-treedata <- TREE_DATA %>%
-  select(!c(Date,...1,...2,Datetime,Date2,Time2,Time3,Datetime2))%>%
-  pivot_longer(cols = !c(Datetime0,Station,Log,Canopy,Block,SilvTreat,LogTreat),
-               names_to = "name",values_to = 'value')
+treedata <- pivot_clean(TREE_DATA)
 
 TREE_DATA$Log <- as.factor(TREE_DATA$Log)
-treedata$Log <- as.factor(treedata$Log)
-#treedata <- treedata %>% filter(!is.na(value))
 
-print('Done')
+treedata$Log <- as.factor(treedata$Log)
+
+MIN_DATE = ymd("2020-07-02")
+
+MAX_DATE = ymd("2020-10-27")
+
+print('Starting Up App')
+
 
 # Define UI
 ui <- fluidPage(theme = shinytheme("cerulean"),
@@ -80,7 +132,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
            
            # Select date range to be plotted
            dateRangeInput("date", strong("Date range"),  
-                          min = "2020-07-02", max = "2020-10-27",
+                          min = MIN_DATE, max = MAX_DATE,
                           start = "2020-07-02 12:45:00 UTC", 
                           end = "2020-10-27 08:00:00 UTC")
          ),
@@ -144,8 +196,8 @@ server <- function(input, output) {
   daterange <- reactiveValues(x = ymd(c("2020-07-02", "2020-10-27")))
   
   output$plot1 <- renderPlot({
-    treedata %>% filter(Log %in% input$logs & name %in% input$var1 & daterange$x[1] < Datetime0 & Datetime0 < daterange$x[2]) %>%
-      ggplot(aes_string(x = 'Datetime0', y = 'value', color = as.character(input$independent))) +
+    treedata %>% filter(Log %in% input$logs & name %in% input$var1 & daterange$x[1] < Date & Date < daterange$x[2]) %>%
+      ggplot(aes_string(x = 'Date', y = 'value', color = as.character(input$independent))) +
       geom_point()+
       theme_bw()+
       labs(title="Title", x="Date", y=as.character((input$var1)), color=as.character(input$independent))+
@@ -156,8 +208,8 @@ server <- function(input, output) {
   })
   
   output$plot2 <- renderPlot({
-    treedata %>% filter(Log %in% input$logs & name %in% input$var2 & daterange$x[1] < Datetime0 & Datetime0 < daterange$x[2]) %>%
-      ggplot(aes(x = Datetime0, y = value, color = as.factor(Log))) +
+    treedata %>% filter(Log %in% input$logs & name %in% input$var2 & daterange$x[1] < Date & Date < daterange$x[2]) %>%
+      ggplot(aes(x = Date, y = value, color = as.factor(Log))) +
       geom_line()+
       theme_bw()+
       labs(title="Title", x="Date", y=as.character((input$var2)), color="Log\n")+
@@ -194,7 +246,8 @@ server <- function(input, output) {
   observeEvent(input$plot1_click, {
     brush <- input$plot1_brush
     if (!is.null(brush)) {
-      daterange$x <- c(brush$xmin, brush$xmax)
+      daterange$x <- c(as_datetime(brush$xmin), as_datetime(brush$xmax))
+      updateDateRangeInput(inputId = 'date', start = as_datetime(daterange$x[1]), end = as_datetime(daterange$x[2]), min = MIN_DATE, max = MAX_DATE)
     } 
     else {
       daterange$x <- c(ymd(input$date[1], input$date[2]))
@@ -204,7 +257,8 @@ server <- function(input, output) {
   observeEvent(input$plot2_click, {
     brush <- input$plot2_brush
     if (!is.null(brush)) {
-      daterange$x <- c(brush$xmin, brush$xmax)
+      daterange$x <- c(as_datetime(brush$xmin), as_datetime(brush$xmax))
+      updateDateRangeInput(inputId = 'date', start = as_datetime(daterange$x[1]), end = as_datetime(daterange$x[2]), min = MIN_DATE, max = MAX_DATE)
     } 
     else {
       daterange$x <- c(ymd(input$date[1], input$date[2]))

@@ -38,19 +38,25 @@ cleanup <- function(dataframe){
 }
 
 average_by_hour <- function(dataframe){
-  original_dataframe <- dataframe
-  vars_to_avg <- colnames(select_if(dataframe, is.numeric)) #get all numeric columns from dataframe that can be averaged
-  dataframe <- mutate(dataframe, hour = as.POSIXct(substr(as.character(date), 1, 13), format="%Y-%m-%d %H")) #chop off minute and second, save to new column
-  dataframe <- dataframe %>%
+  dat <- dataframe
+  ivs <- c(dat$Log[1], dat$station[1], dat$Canopy[1], dat$SilvTreat[1], dat$LogTreat[1])
+  dat <- dat %>%
+    mutate(hour = as.POSIXct(substr(as.character(date), 1, 13), format="%Y-%m-%d %H")) #chop off minute and second, save to new column
+  dat <- dat %>%
     group_by(hour) %>%
-    summarise_at(vars(vars_to_avg), mean, na.rm=TRUE)
-  dataframe <- mutate(dataframe, date = hour + hours(1)) #this is the START of the hour, adding an hour changes it to end of hour
-  dataframe <- subset(dataframe, select = -c(hour)) #drop hour column
-  return(dataframe)
+    summarise_if(is.numeric, mean, na.rm = TRUE) 
+  dat <- dat %>%
+    mutate(date = hour + hours(1), #this is the START of the hour, adding an hour changes it to end of hour
+           station = ivs[2],
+           Canopy = ivs[3],
+           SilvTreat = ivs[4],
+           LogTreat = ivs[5]) %>%
+    select(-c(hour))
+  return(dat)
 }
 
-setwd("~/R/S22-Tree-App/hbTree/treedata_unprocessed")
-file_list = list.files(path="~/R/S22-Tree-App/hbTree/treedata_unprocessed")
+setwd("~/TreeApp/S22-Tree-App/hbTree/treedata_unprocessed")
+file_list = list.files(path="~/TreeApp/S22-Tree-App/hbTree/treedata_unprocessed")
 
 all_logs <- data.frame()
 
@@ -61,9 +67,10 @@ for (i in 1:length(file_list)){
     temp_data <- read_csv(file_list[i])
   }
   temp_data <- average_by_hour(temp_data)
-  temp_data$file_source <- file_list[i]
+  temp_data$fileSource <- file_list[i]
   all_logs <- bind_rows(all_logs, temp_data)
 }
 
-write.csv(all_logs, "~/R/S22-Tree-App/hbTree/treedata/All_logs_unclean.csv")
-write.csv(cleanup(all_logs), "~/R/S22-Tree-App/hbTree/treedata/All_logs.csv")
+write.csv(all_logs, "~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs_unclean.csv")
+write.csv(cleanup(all_logs), "~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs.csv")
+
