@@ -2,6 +2,41 @@ library(tidyverse)
 library(dplyr)
 library(lubridate)
 
+create_dataset <- function(folder_location) {
+  all_logs <- data.frame()
+  file_list = list.files(path=folder_location)
+  
+  for (i in 1:length(file_list)){
+    if(file_list[i] == "Log 3 2020 summer.csv"){
+      temp_data <- read_csv(file_list[i], col_types = cols(date = col_datetime(format = "%m/%d/%Y %H:%M")))
+    } else {
+      temp_data <- read_csv(file_list[i])
+    }
+    temp_data <- average_by_hour(temp_data)
+    temp_data$fileSource <- file_list[i]
+    all_logs <- bind_rows(all_logs, temp_data)
+  }
+  return(all_logs)
+}
+
+average_by_hour <- function(dataframe){
+  dat <- dataframe
+  ivs <- c(dat$Log[1], dat$station[1], dat$Canopy[1], dat$SilvTreat[1], dat$LogTreat[1])
+  dat <- dat %>%
+    mutate(hour = as.POSIXct(substr(as.character(date), 1, 13), format="%Y-%m-%d %H")) #chop off minute and second, save to new column
+  dat <- dat %>%
+    group_by(hour) %>%
+    summarise_if(is.numeric, mean, na.rm = TRUE) 
+  dat <- dat %>%
+    mutate(date = hour + hours(1), #this is the START of the hour, adding an hour changes it to end of hour
+           station = ivs[2],
+           Canopy = ivs[3],
+           SilvTreat = ivs[4],
+           LogTreat = ivs[5]) %>%
+    select(-c(hour))
+  return(dat)
+}
+
 cleanup <- function(dataframe){
   #rename fields that start with a number...crashes a function later on
   names(dataframe)[names(dataframe) == "4m_VWC"] <- "VWC_4m"
@@ -25,52 +60,20 @@ cleanup <- function(dataframe){
   dataframe$vp <- dataframe$vpsat * (dataframe$RH/100)
   dataframe$vpd <- dataframe$vpsat - dataframe$vp
   
-  # Take apart datetime stamp and replace midnight with one second past midnight
-  #dataframe$datetime <- as.character(dataframe$date)
-  #dataframe$date2 <- substr(dataframe$datetime,1,10)
-  #dataframe$time2 <- substr(dataframe$datetime,12,19)
-  #dataframe$time3 <- str_replace(dataframe$time2,'00:00:00','00:00:01')
-  #dataframe$datetime2 <- paste(dataframe$date2,dataframe$time3,sep=" ")
-  
-  #dataframe$datetime0 <- ymd_hms(dataframe$datetime2) ####
-  
   return(dataframe)
 }
 
-average_by_hour <- function(dataframe){
-  dat <- dataframe
-  ivs <- c(dat$Log[1], dat$station[1], dat$Canopy[1], dat$SilvTreat[1], dat$LogTreat[1])
-  dat <- dat %>%
-    mutate(hour = as.POSIXct(substr(as.character(date), 1, 13), format="%Y-%m-%d %H")) #chop off minute and second, save to new column
-  dat <- dat %>%
-    group_by(hour) %>%
-    summarise_if(is.numeric, mean, na.rm = TRUE) 
-  dat <- dat %>%
-    mutate(date = hour + hours(1), #this is the START of the hour, adding an hour changes it to end of hour
-           station = ivs[2],
-           Canopy = ivs[3],
-           SilvTreat = ivs[4],
-           LogTreat = ivs[5]) %>%
-    select(-c(hour))
-  return(dat)
-}
 
-setwd("~/TreeApp/S22-Tree-App/hbTree/treedata_unprocessed")
-file_list = list.files(path="~/TreeApp/S22-Tree-App/hbTree/treedata_unprocessed")
 
-all_logs <- data.frame()
 
-for (i in 1:length(file_list)){
-  if(file_list[i] == "Log 3 2020 summer.csv"){
-    temp_data <- read_csv(file_list[i], col_types = cols(date = col_datetime(format = "%m/%d/%Y %H:%M")))
-  } else {
-    temp_data <- read_csv(file_list[i])
-  }
-  temp_data <- average_by_hour(temp_data)
-  temp_data$fileSource <- file_list[i]
-  all_logs <- bind_rows(all_logs, temp_data)
-}
+folder_location = "~/TreeApp/S22-Tree-App/hbTree/treedata_unprocessed"
 
-write.csv(all_logs, "~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs_unclean.csv")
-write.csv(cleanup(all_logs), "~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs.csv")
+setwd(folder_location)
+
+TREE_DATA <- create_dataset(folder_location=folder_location)
+
+write.csv(TREE_DATA, "~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs_unclean.csv")
+
+write.csv(cleanup(TREE_DATA), "~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs.csv")
+
 

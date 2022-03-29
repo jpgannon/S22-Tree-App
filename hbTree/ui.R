@@ -11,36 +11,36 @@ library(formulaic)
 
 insertNA_at_timejumps <- function(dataframe, sensorNumber, recordInterval, dateVarName) {
   dataframe$date <- dataframe[[dateVarName]]
-  dataframe <- dataframe %>% 
-    filter(Log == sensorNumber) %>% 
+  dataframe <- dataframe %>%
+    filter(Log == sensorNumber) %>%
     arrange(date)
-  
+
   time <- dataframe %>% select(date)
   time <- rbind(time[-1,], time[nrow(time),] + recordInterval)
   dataframe$Time_Lag <- as.double(time$date - dataframe$date)
-  
-  blanks <- dataframe %>% 
+
+  blanks <- dataframe %>%
     filter(Time_Lag > (recordInterval/3600)) %>%
     select(date, station, Log, Canopy, Block, SilvTreat, LogTreat, Time_Lag)
   blanks$date <- blanks$date + recordInterval
-  
+
   new_df <- dataframe %>%
-    full_join(blanks,) %>% 
+    full_join(blanks,) %>%
     select(-c(Time_Lag))
-  
+
   return(new_df)
 }
 
 insertNA_at_timejumps_all_logs <- function(dataframe, sensors, recordInterval, dateVarName) {
   new_df = data.frame()
   for (sensorNumber in 1:sensors) {
-    output_df <- 
+    output_df <-
       insertNA_at_timejumps(
         dataframe = dataframe,
-        sensorNumber = sensorNumber, 
-        recordInterval = recordInterval, 
+        sensorNumber = sensorNumber,
+        recordInterval = recordInterval,
         dateVarName = dateVarName)
-    new_df <- 
+    new_df <-
       rbind(new_df, output_df)
   }
   return(new_df)
@@ -69,8 +69,6 @@ pivot_clean <- function(dataframe) {
   return(new_df)
 }
 
-
-
 TREE_DATA <- read_csv("~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs.csv")
 
 TREE_DATA <- insertNA_at_timejumps_all_logs(dataframe = TREE_DATA, sensors = 12,
@@ -95,7 +93,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
   tabsetPanel(
     
     tabPanel("Home Page",
-         titlePanel("Tree App Title"),
+         titlePanel("Microclimate Visualization within an Adaptive Silviculture Experiment in New England"),
          fluidRow(
            column(10, 
               mainPanel(width=12,
@@ -143,7 +141,8 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
            plotOutput("plot1", width="100%", height = "215px", dblclick = "plot1_click",
                       brush = brushOpts(id = "plot1_brush", resetOnNew = TRUE)),
            plotOutput("plot2", width="100%", height = "215px", dblclick = "plot2_click",
-                      brush = brushOpts(id = "plot2_brush", resetOnNew = TRUE))
+                      brush = brushOpts(id = "plot2_brush", resetOnNew = TRUE)),
+           h4('Drag Across Plot, then Double Click to Zoom In on Section')
          )
        )
     ),
@@ -173,7 +172,8 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          mainPanel(
            
            # Create brushing functionality 
-           plotOutput("plotm", width="100%", height = "430px")
+           plotOutput("plotm", width="100%", height = "430px"),
+           h4('Drag Across Plot, then Double Click to Zoom In Section')
          )
        )
     )
@@ -187,9 +187,22 @@ server <- function(input, output) {
   output$text <- renderText({
     HTML(paste(
       '',
-      'Welcome',
       '',
-      'Lorem ipsum dolor sit amet, zril legere ei cum. At vis electram imperdiet hendrerit, cu diam liber electram usu, ei ius nobis civibus legendos. Ne impetus argumentum mei, pri dissentiet philosophia definitionem eu. Augue primis tacimates in sed, ut mollis maiorum mea. Appareat neglegentur mel an, vitae libris equidem ius in, brute nostrud forensibus mel ne.', 
+      'Silviculture is the practice of applied forest ecology, where vegetation is manipulated and designed to suit the landowner’s objectives across space and time. These designs are planned with the context of different forest stressors, such as insects and disease, winter losses, urbanization, and poor management. The main goal of all silviculture practices is to increase the overall resiliency of the forest.
+        <br/>
+        <br/>
+        An experiment was conducted in New England where forest and other natural resource managers integrated different types of climate changes into silviculture planning. The main goal of this experiment was to populate a multi-region study with ecosystem-specific climate change and forest health adaptation treatments. Key variables from 4 different adaptation treatments across 3-5 forest types were measured and analyzed.
+        <br/>
+        <br/>
+        This application is the data visualization of the microclimates within the adaptive silviculture experiment in New England. A time-based and multivariate analysis is displayed for the user.
+        <br/>
+        <br/>
+        <br/>
+        How to use:
+        <br/>
+        <br/>
+        For time based analysis first select the independent variable from the drop down then select which log(s) you want to graph then select variable 1 for the top graph and variable 2 for the bottom graph finally specify the date range you want to be graphed. If you want to zoom into a specific range within the graph you are able to by clicking and dragging to the desired range and double clicking, you will zoom into the desired date range.
+        For multivariable analysis you just select the log(s) you want to graph and the variables you want on the x and y axis.', 
       sep="<br/>"))
   })
   
@@ -200,10 +213,8 @@ server <- function(input, output) {
       ggplot(aes_string(x = 'Date', y = 'value', color = as.character(input$independent))) +
       geom_point()+
       theme_bw()+
-      labs(title="Title", x="Date", y=as.character((input$var1)), color=as.character(input$independent))+
-      theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
-            axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
-            plot.title = element_text(size = 18, face = "bold", color = "black"))
+      labs(y=as.character((input$var1)), color=as.character(input$independent))+
+      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))
     
   })
   
@@ -212,10 +223,8 @@ server <- function(input, output) {
       ggplot(aes(x = Date, y = value, color = as.factor(Log))) +
       geom_line()+
       theme_bw()+
-      labs(title="Title", x="Date", y=as.character((input$var2)), color="Log\n")+
-      theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
-            axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
-            plot.title = element_text(size = 18, face = "bold", color = "black"))
+      labs(y=as.character((input$var2)), color="Log\n")+
+      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))
     
   })
   
@@ -224,7 +233,7 @@ server <- function(input, output) {
       ggplot(aes_string(x = as.character(add.backtick(input$multi1)), y = as.character(add.backtick(input$multi2)), color = quote(Log))) +
       geom_point()+
       theme_bw()+
-      labs(title="Title", x=as.character((input$multi1)), y=as.character((input$multi2)), color="Log\n")+
+      labs(title="Multivariable Relationship", x=as.character((input$multi1)), y=as.character((input$multi2)), color="Log\n")+
       theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
             axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
             plot.title = element_text(size = 18, face = "bold", color = "black"))
