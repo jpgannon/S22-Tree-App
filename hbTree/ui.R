@@ -112,7 +112,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
            # Select which Log(s) to plot
            selectInput("independent", strong("Select Independent Variable"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
            
-           selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
+           #selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
            
            selectInput("logs", strong("Select Log(s)"),
                        choices = unique(treedata$Log), 
@@ -240,14 +240,14 @@ server <- function(input, output) {
     
   })
   
-  outvar = reactive({
-    myvar = input$independent
-    unique(treedata[[myvar]])
-  })
-  
-  observe({
-    updateSelectInput(inputId = 'groups', choices = outvar())
-  })
+  # outvar = reactive({
+  #   myvar = input$independent
+  #   unique(treedata[[myvar]])
+  # })
+  # 
+  # observe({
+  #   updateSelectInput(inputId = 'groups', choices = outvar())
+  # })
   
   observeEvent(input$date[1], {daterange$x[1] <- ymd(input$date[1])})
   observeEvent(input$date[2], {daterange$x[2] <- ymd(input$date[2])})
