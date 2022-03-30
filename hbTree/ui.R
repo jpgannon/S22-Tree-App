@@ -69,7 +69,7 @@ pivot_clean <- function(dataframe) {
   return(new_df)
 }
 
-TREE_DATA <- read_csv("~/TreeApp/S22-Tree-App/hbTree/treedata/All_logs.csv")
+TREE_DATA <- read_csv("treedata/All_logs.csv")
 
 TREE_DATA <- insertNA_at_timejumps_all_logs(dataframe = TREE_DATA, sensors = 12,
                                             recordInterval = 3600, dateVarName = 'date')
