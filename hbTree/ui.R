@@ -214,7 +214,8 @@ server <- function(input, output) {
       geom_point()+
       theme_bw()+
       labs(y=as.character((input$var1)), color=as.character(input$independent))+
-      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))
+      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))+
+      theme(legend.position="bottom")
     
   })
   
@@ -224,7 +225,8 @@ server <- function(input, output) {
       geom_line()+
       theme_bw()+
       labs(y=as.character((input$var2)), color="Log\n")+
-      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))
+      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))+
+      theme(legend.position="bottom")
     
   })
   
@@ -236,7 +238,8 @@ server <- function(input, output) {
       labs(title="Multivariable Relationship", x=as.character((input$multi1)), y=as.character((input$multi2)), color="Log\n")+
       theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
             axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
-            plot.title = element_text(size = 18, face = "bold", color = "black"))
+            plot.title = element_text(size = 18, face = "bold", color = "black"))+
+      theme(legend.position="bottom")
     
   })
   
