@@ -10,20 +10,29 @@ library(data.table)
 library(formulaic)
 
 insertNA_at_timejumps <- function(dataframe, sensorNumber, recordInterval, dateVarName) {
+  # Gets the time-lag between subsequent observations.
+  # Creates copies of any observations with time-lag over an hour
+  # Change any numeric values to NA's for copies, excluding date
+  # Shifts the date value of copies by an hour
+  # Adds NA filled, time shifted, copies to original dataframe
+  
   dataframe$date <- dataframe[[dateVarName]]
+  # Select a single sensor and sort date ascending
   dataframe <- dataframe %>%
     filter(Log == sensorNumber) %>%
     arrange(date)
-
   time <- dataframe %>% select(date)
+  # Remove first row, duplicate final row and add an (hour) to it
   time <- rbind(time[-1,], time[nrow(time),] + recordInterval)
+  # Get the time lag for subsequent observations
   dataframe$Time_Lag <- as.double(time$date - dataframe$date)
-
+  # Select any rows with a time lag of more than an (hour)
   blanks <- dataframe %>%
     filter(Time_Lag > (recordInterval/3600)) %>%
     select(date, station, Log, Canopy, Block, SilvTreat, LogTreat, Time_Lag)
+  # Create blank rows with date shifted by an (hour)
   blanks$date <- blanks$date + recordInterval
-
+  # Join the blank time shifted rows to dataframe
   new_df <- dataframe %>%
     full_join(blanks,) %>%
     select(-c(Time_Lag))
@@ -32,6 +41,9 @@ insertNA_at_timejumps <- function(dataframe, sensorNumber, recordInterval, dateV
 }
 
 insertNA_at_timejumps_all_logs <- function(dataframe, sensors, recordInterval, dateVarName) {
+  # For each sensor in dataframe run insertNA_at_timejumps
+  # The purpose of this function is to remove any 'bridges' 
+  #   between disjointed portions of data when line plotting
   new_df = data.frame()
   for (sensorNumber in 1:sensors) {
     output_df <-
@@ -47,6 +59,10 @@ insertNA_at_timejumps_all_logs <- function(dataframe, sensors, recordInterval, d
 }
 
 clean_up_names <- function(dataframe) {
+  # For each variable name in dataframe make the following changes:
+  #   Replace underscores with spaces
+  #   Capitalize first letter in each word
+  # Note: Does not mess with any existing capitalization
   new_names <- c()
   for (name in names(dataframe)) {
     new_name <- ''
@@ -110,13 +126,13 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          sidebarPanel(
            
            # Select which Log(s) to plot
-           selectInput("independent", strong("Select Independent Variable"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
+           selectInput("independent", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
            
-           #selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
+           selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
            
            selectInput("logs", strong("Select Log(s)"),
-                       choices = unique(treedata$Log), 
-                       selected = unique(treedata$Log)[1], 
+                       choices = unique(treedata$Log),
+                       selected = unique(treedata$Log)[1],
                        multiple = TRUE),
            
            # Select variable for plot1
@@ -153,11 +169,15 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          
          sidebarPanel(
            
-           # Select which Log(s) to plot
-           selectInput("multilogs", strong("Select Log(s)"),
-                       choices = unique(treedata$Log), 
-                       selected = unique(treedata$Log)[1],
-                       multiple = TRUE),
+           selectInput("independent2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
+           
+           selectInput("groups2", strong("Select Group(s)"), "", multiple = TRUE),
+           
+           # # Select which Log(s) to plot
+           # selectInput("multilogs", strong("Select Log(s)"),
+           #             choices = unique(treedata$Log), 
+           #             selected = unique(treedata$Log)[1],
+           #             multiple = TRUE),
            
            # Select variable for plot1
            selectInput("multi1", strong("Select X Axis"),
@@ -209,45 +229,74 @@ server <- function(input, output) {
   daterange <- reactiveValues(x = ymd(c("2020-07-02", "2020-10-27")))
   
   output$plot1 <- renderPlot({
-    treedata %>% filter(Log %in% input$logs & name %in% input$var1 & daterange$x[1] < Date & Date < daterange$x[2]) %>%
-      ggplot(aes_string(x = 'Date', y = 'value', color = as.character(input$independent))) +
+    treedata %>% 
+      filter(!!rlang::sym(as.character(input$independent)) %in% input$groups & 
+               name %in% input$var1 & 
+               daterange$x[1] < Date & 
+               Date < daterange$x[2]) %>%
+      ggplot(aes_string(x = 'Date', y = 'value', 
+                        color = as.character(input$independent))) +
       geom_point()+
       theme_bw()+
-      labs(y=as.character((input$var1)), color=as.character(input$independent))+
-      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))
+      labs(y = as.character((input$var1)), 
+           color=as.character(input$independent))+
+      theme(axis.text.y = element_text(size = 14), 
+            axis.title.y = element_text(size = 16))
     
   })
   
   output$plot2 <- renderPlot({
-    treedata %>% filter(Log %in% input$logs & name %in% input$var2 & daterange$x[1] < Date & Date < daterange$x[2]) %>%
-      ggplot(aes(x = Date, y = value, color = as.factor(Log))) +
+    treedata %>% 
+      filter(!!rlang::sym(as.character(input$independent)) %in% input$groups & 
+               name %in% input$var2 & 
+               daterange$x[1] < Date & 
+               Date < daterange$x[2]) %>%
+      ggplot(aes_string(x = 'Date', y = 'value', 
+                        color = as.character(input$independent))) +
       geom_line()+
       theme_bw()+
-      labs(y=as.character((input$var2)), color="Log\n")+
-      theme(axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16))
+      labs(y = as.character((input$var2)), 
+           color=as.character(input$independent))+
+      theme(axis.text.y = element_text(size = 14), 
+            axis.title.y = element_text(size = 16))
     
   })
   
   output$plotm <- renderPlot({
-    TREE_DATA %>% filter(Log %in% input$multilogs) %>%
-      ggplot(aes_string(x = as.character(add.backtick(input$multi1)), y = as.character(add.backtick(input$multi2)), color = quote(Log))) +
+    TREE_DATA %>% 
+      filter(!!rlang::sym(as.character(input$independent2)) %in% input$groups2) %>%
+      ggplot(aes_string(x = as.character(add.backtick(input$multi1)), 
+                        y = as.character(add.backtick(input$multi2)), 
+                        color = as.character(input$independent2))) +
       geom_point()+
       theme_bw()+
-      labs(title="Multivariable Relationship", x=as.character((input$multi1)), y=as.character((input$multi2)), color="Log\n")+
+      labs(title="Multivariable Relationship", 
+           x = as.character((input$multi1)), 
+           y = as.character((input$multi2)), 
+           color = as.character(input$independent2))+
       theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
             axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
             plot.title = element_text(size = 18, face = "bold", color = "black"))
     
   })
   
-  # outvar = reactive({
-  #   myvar = input$independent
-  #   unique(treedata[[myvar]])
-  # })
-  # 
-  # observe({
-  #   updateSelectInput(inputId = 'groups', choices = outvar())
-  # })
+  outvar = reactive({
+    myvar = input$independent
+    unique(treedata[[myvar]])
+  })
+
+  observe({
+    updateSelectInput(inputId = 'groups', choices = outvar())
+  })
+  
+  outvar2 = reactive({
+    myvar2 = input$independent2
+    unique(treedata[[myvar2]])
+  })
+  
+  observe({
+    updateSelectInput(inputId = 'groups2', choices = outvar2())
+  })
   
   observeEvent(input$date[1], {daterange$x[1] <- ymd(input$date[1])})
   observeEvent(input$date[2], {daterange$x[2] <- ymd(input$date[2])})
