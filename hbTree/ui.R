@@ -79,8 +79,8 @@ clean_up_names <- function(dataframe) {
 
 pivot_clean <- function(dataframe) {
   new_df <- dataframe %>%
-    select(-c(...1, ...2, FileSource)) %>% 
-    pivot_longer(cols = !c(Date, Station, Log, Canopy, Block, SilvTreat, LogTreat),
+    select(-c(...1, ...2, FileSource, Station)) %>% 
+    pivot_longer(cols = !c(Date, Log, Canopy, Block, SilvTreat, LogTreat),
                  names_to = "name",values_to = 'value')
   return(new_df)
 }
