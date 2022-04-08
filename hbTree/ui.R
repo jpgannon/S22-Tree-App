@@ -192,7 +192,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          mainPanel(
            
            # Create brushing functionality 
-           plotOutput("plotm", width="100%", height = "430px"),
+           plotOutput("plotm", width="430px", height = "430px"),
            h4('Drag Across Plot, then Double Click to Zoom In Section')
          )
        )
