@@ -126,7 +126,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          sidebarPanel(
            
            # Select which Log(s) to plot
-           selectInput("independent", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
+           selectInput("independent", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
            
            selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
            
@@ -169,7 +169,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          
          sidebarPanel(
            
-           selectInput("independent2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
+           selectInput("independent2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
            
            selectInput("groups2", strong("Select Group(s)"), "", multiple = TRUE),
            
