@@ -103,8 +103,8 @@ clean_up_names <- function(dataframe, acronym_dict) {
 
 pivot_clean <- function(dataframe) {
   new_df <- dataframe %>%
-    select(-c(...1, ...2, FileSource)) %>% 
-    pivot_longer(cols = !c(Date, Station, Log, Canopy, Block, SilvTreat, LogTreat),
+    select(-c(...1, ...2, FileSource, Station)) %>% 
+    pivot_longer(cols = !c(Date, Log, Canopy, Block, SilvTreat, LogTreat),
                  names_to = "name",values_to = 'value')
   return(new_df)
 }
@@ -152,7 +152,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          sidebarPanel(
            
            # Select which Log(s) to plot
-           selectInput("independent", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
+           selectInput("independent", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
            
            selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
            
@@ -195,7 +195,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          
          sidebarPanel(
            
-           selectInput("independent2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat','Station')),
+           selectInput("independent2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
            
            selectInput("groups2", strong("Select Group(s)"), "", multiple = TRUE),
            
@@ -218,7 +218,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          mainPanel(
            
            # Create brushing functionality 
-           plotOutput("plotm", width="100%", height = "430px"),
+           plotOutput("plotm", width="430px", height = "430px"),
            h4('Drag Across Plot, then Double Click to Zoom In Section')
          )
        )
