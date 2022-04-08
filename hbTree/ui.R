@@ -9,6 +9,7 @@ library(ggplot2)
 library(data.table)
 library(formulaic)
 
+
 insertNA_at_timejumps <- function(dataframe, sensorNumber, recordInterval, dateVarName) {
   # Gets the time-lag between subsequent observations.
   # Creates copies of any observations with time-lag over an hour
@@ -40,6 +41,7 @@ insertNA_at_timejumps <- function(dataframe, sensorNumber, recordInterval, dateV
   return(new_df)
 }
 
+
 insertNA_at_timejumps_all_logs <- function(dataframe, sensors, recordInterval, dateVarName) {
   # For each sensor in dataframe run insertNA_at_timejumps
   # The purpose of this function is to remove any 'bridges' 
@@ -58,7 +60,24 @@ insertNA_at_timejumps_all_logs <- function(dataframe, sensors, recordInterval, d
   return(new_df)
 }
 
-clean_up_names <- function(dataframe) {
+
+get_daterange <- function(dataframe) {
+  # Gets earliest and latest date shared in common by all logs
+  dat <- dataframe %>%
+    group_by(Log) %>%
+    select(Log, date) %>%
+    summarise_at(vars(date), list(min=min, max=max))
+  earliest <- dat %>%
+    summarise_at(vars(min), list(date=max))
+  earliest_date <- ymd_hms(earliest$date)
+  latest <- dat %>%
+    summarise_at(vars(max), list(date=min))
+  latest_date <- ymd_hms(latest$date)
+  return(c(date(earliest_date), date(latest_date)))
+}
+
+
+clean_up_names <- function(dataframe, acronym_dict) {
   # For each variable name in dataframe make the following changes:
   #   Replace underscores with spaces
   #   Capitalize first letter in each word
@@ -70,12 +89,17 @@ clean_up_names <- function(dataframe) {
       new_word <- paste(toupper(substr(word,1,1)), substr(word,2,100), sep = '')
       new_name <- paste(new_name, new_word)
       new_name <- trimws(new_name)
+      
+      for (i in c(1:length(acronym_dict$Acronym))) {
+        new_name <- sub(acronym_dict$Acronym[i], acronym_dict$Meaning[i], new_name)
+      }
     }
     new_names <- c(new_names, new_name)
   }
   setnames(dataframe, old = names(dataframe), new = new_names)
   return(dataframe)
 }
+
 
 pivot_clean <- function(dataframe) {
   new_df <- dataframe %>%
@@ -85,21 +109,23 @@ pivot_clean <- function(dataframe) {
   return(new_df)
 }
 
-TREE_DATA <- read_csv("treedata/All_logs.csv")
 
+TREE_DATA <- read_csv("treedata/All_logs.csv")
 TREE_DATA <- insertNA_at_timejumps_all_logs(dataframe = TREE_DATA, sensors = 12,
                                             recordInterval = 3600, dateVarName = 'date')
-TREE_DATA <- clean_up_names(TREE_DATA)
+date_range <- get_daterange(TREE_DATA)
+MIN_DATE <- ymd(date_range[1])
+MAX_DATE <- ymd(date_range[2])
 
+acronym_dict <- read_csv("treedata/Acronyms.csv")
+TREE_DATA <- clean_up_names(TREE_DATA, acronym_dict)
 treedata <- pivot_clean(TREE_DATA)
 
 TREE_DATA$Log <- as.factor(TREE_DATA$Log)
-
 treedata$Log <- as.factor(treedata$Log)
 
-MIN_DATE = ymd("2020-07-02")
 
-MAX_DATE = ymd("2020-10-27")
+
 
 print('Starting Up App')
 
