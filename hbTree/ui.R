@@ -97,6 +97,7 @@ clean_up_names <- function(dataframe, acronym_dict) {
     new_names <- c(new_names, new_name)
   }
   setnames(dataframe, old = names(dataframe), new = new_names)
+  
   return(dataframe)
 }
 
@@ -125,8 +126,6 @@ TREE_DATA$Log <- as.factor(TREE_DATA$Log)
 treedata$Log <- as.factor(treedata$Log)
 
 
-
-
 print('Starting Up App')
 
 
@@ -152,14 +151,9 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          sidebarPanel(
            
            # Select which Log(s) to plot
-           selectInput("independent", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
+           selectInput("Group", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat'), selected = 'Canopy'),
            
            selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
-           
-           selectInput("logs", strong("Select Log(s)"),
-                       choices = unique(treedata$Log),
-                       selected = unique(treedata$Log)[1],
-                       multiple = TRUE),
            
            # Select variable for plot1
            selectInput("var1", strong("Select Variable 1"),
@@ -174,15 +168,18 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
            dateRangeInput("date", strong("Date range"),  
                           min = MIN_DATE, max = MAX_DATE,
                           start = "2020-07-02 12:45:00 UTC", 
-                          end = "2020-10-27 08:00:00 UTC")
+                          end = "2020-10-27 08:00:00 UTC"),
+           # Select opacity for plot
+           sliderInput("slider1",strong("Opacity"),
+                       min = 0, max = 1, value = 0.5)
          ),
          
          mainPanel(
            
            # Create brushing functionality 
-           plotOutput("plot1", width="100%", height = "215px", dblclick = "plot1_click",
+           plotOutput("plot1", width="100%", height = "300px", dblclick = "plot1_click",
                       brush = brushOpts(id = "plot1_brush", resetOnNew = TRUE)),
-           plotOutput("plot2", width="100%", height = "215px", dblclick = "plot2_click",
+           plotOutput("plot2", width="100%", height = "300px", dblclick = "plot2_click",
                       brush = brushOpts(id = "plot2_brush", resetOnNew = TRUE)),
            h4('Drag Across Plot, then Double Click to Zoom In on Section')
          )
@@ -195,30 +192,28 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          
          sidebarPanel(
            
-           selectInput("independent2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
+           selectInput("Group2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
            
            selectInput("groups2", strong("Select Group(s)"), "", multiple = TRUE),
            
-           # # Select which Log(s) to plot
-           # selectInput("multilogs", strong("Select Log(s)"),
-           #             choices = unique(treedata$Log), 
-           #             selected = unique(treedata$Log)[1],
-           #             multiple = TRUE),
-           
-           # Select variable for plot1
+           # Select variable 1 for plot
            selectInput("multi1", strong("Select X Axis"),
                        choices = unique(treedata$name), 
                        selected = unique(treedata$name)[2]),
-           # Select variable for plot2
+           # Select variable 2 for plot
            selectInput("multi2", strong("Select Y Axis"),
                        choices = unique(treedata$name), 
-                       selected = unique(treedata$name)[3])
+                       selected = unique(treedata$name)[3]),
+           # Select opacity of points
+           sliderInput("slider",strong("Opacity"),
+                       min = 0, max = 1, value = 0.5)
+           
          ),
          
          mainPanel(
            
            # Create brushing functionality 
-           plotOutput("plotm", width="430px", height = "430px"),
+           plotOutput("plotm", width="600px", height = "600px"),
            h4('Drag Across Plot, then Double Click to Zoom In Section')
          )
        )
@@ -247,7 +242,7 @@ server <- function(input, output) {
         How to use:
         <br/>
         <br/>
-        For time based analysis first select the independent variable from the drop down then select which log(s) you want to graph then select variable 1 for the top graph and variable 2 for the bottom graph finally specify the date range you want to be graphed. If you want to zoom into a specific range within the graph you are able to by clicking and dragging to the desired range and double clicking, you will zoom into the desired date range.
+        For time based analysis first select the Group variable from the drop down then select which log(s) you want to graph then select variable 1 for the top graph and variable 2 for the bottom graph finally specify the date range you want to be graphed. If you want to zoom into a specific range within the graph you are able to by clicking and dragging to the desired range and double clicking, you will zoom into the desired date range.
         For multivariable analysis you just select the log(s) you want to graph and the variables you want on the x and y axis.', 
       sep="<br/>"))
   })
@@ -255,68 +250,107 @@ server <- function(input, output) {
   daterange <- reactiveValues(x = ymd(c("2020-07-02", "2020-10-27")))
   
   output$plot1 <- renderPlot({
-    treedata %>% 
-      filter(!!rlang::sym(as.character(input$independent)) %in% input$groups & 
-               name %in% input$var1 & 
-               daterange$x[1] < Date & 
-               Date < daterange$x[2]) %>%
-      ggplot(aes_string(x = 'Date', y = 'value', 
-                        color = as.character(input$independent))) +
-      geom_point()+
-      theme_bw()+
-      labs(y = as.character((input$var1)), 
-           color=as.character(input$independent))+
-      theme(axis.text.y = element_text(size = 14), 
-            axis.title.y = element_text(size = 16))
     
+    if (as.character(input$Group) == 'Log') {
+      
+      subdat <- treedata %>% 
+        rename('Group' = as.character(input$Group)) %>%
+        filter(Group %in% input$groups & name %in% input$var1 & 
+                 daterange$x[1] < Date & Date < daterange$x[2])
+      
+      subdat %>%
+        ggplot(mapping = aes(x = Date, y = value, color = Group)) +
+        #geom_point(alpha = input$slider1) + theme_bw() +
+        geom_line() + theme_bw() +
+        labs(x = '', y = input$var1, color = input$Group) +
+        theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
+              axis.title.y = element_text(size = 14), legend.position="right")
+    } else {
+      
+      subdat <- treedata %>% 
+        rename('Group' = as.character(input$Group)) %>%
+        mutate(combined_variables = paste(Group,Log,sep = '-')) %>%
+        filter(Group %in% input$groups & name %in% input$var1 & 
+                 daterange$x[1] < Date & Date < daterange$x[2])
+      
+      subdat %>%
+        ggplot(mapping = aes(x = Date, y = value, color = factor(combined_variables))) +
+        #geom_point(alpha = input$slider1, mapping = aes(shape = Group)) + theme_bw() +
+        geom_line(aes(linetype = Group)) + theme_bw() +
+        labs(x = '', y = input$var1, color = input$Group) +
+        theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
+              axis.title.y = element_text(size = 14), legend.position="right")
+    }
+
   })
   
   output$plot2 <- renderPlot({
-    treedata %>% 
-      filter(!!rlang::sym(as.character(input$independent)) %in% input$groups & 
-               name %in% input$var2 & 
-               daterange$x[1] < Date & 
-               Date < daterange$x[2]) %>%
-      ggplot(aes_string(x = 'Date', y = 'value', 
-                        color = as.character(input$independent))) +
-      geom_line()+
-      theme_bw()+
-      labs(y = as.character((input$var2)), 
-           color=as.character(input$independent))+
-      theme(axis.text.y = element_text(size = 14), 
-            axis.title.y = element_text(size = 16))
     
+    if (as.character(input$Group) == 'Log') {
+      
+      subdat <- treedata %>% 
+        rename('Group' = as.character(input$Group)) %>%
+        filter(Group %in% input$groups & name %in% input$var2 & 
+                 daterange$x[1] < Date & Date < daterange$x[2])
+      
+      subdat %>% 
+        ggplot(mapping = aes(x = Date, y = value, color = Group)) +
+        geom_line() + theme_bw() +
+        labs(x = '', y = input$var2, color = input$Group) +
+        theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
+              axis.title.y = element_text(size = 14), legend.position="right")
+    } else {
+      
+      subdat <- treedata %>% 
+        rename('Group' = as.character(input$Group)) %>%
+        mutate(combined_variables = paste(Group,Log,sep = '-')) %>%
+        filter(Group %in% input$groups & name %in% input$var2 & 
+                 daterange$x[1] < Date & Date < daterange$x[2])
+      
+      subdat %>% 
+        ggplot(mapping = aes(x = Date, y = value, color = factor(combined_variables))) +
+        geom_line(aes(linetype = Group), size = 0.6) + theme_bw() +
+        scale_linetype_manual(values=c("solid", "longdash", "dotted", "dotdash","77")) +
+        labs(x = '', y = input$var2, color = input$Group) +
+        theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
+              axis.title.y = element_text(size = 14), legend.position="right")
+    }
+  
   })
   
   output$plotm <- renderPlot({
     TREE_DATA %>% 
-      filter(!!rlang::sym(as.character(input$independent2)) %in% input$groups2) %>%
+      filter(!!rlang::sym(as.character(input$Group2)) %in% input$groups2) %>%
       ggplot(aes_string(x = as.character(add.backtick(input$multi1)), 
                         y = as.character(add.backtick(input$multi2)), 
-                        color = as.character(input$independent2))) +
-      geom_point()+
-      theme_bw()+
-      labs(title="Multivariable Relationship", 
+                        color = as.character(input$Group2))) +
+      geom_point(alpha = input$slider) + theme_bw() +
+      labs(title = "Multivariable Relationship", 
            x = as.character((input$multi1)), 
            y = as.character((input$multi2)), 
-           color = as.character(input$independent2))+
-      theme(axis.text.x = element_text(size = 14), axis.title.x = element_text(size = 16),
-            axis.text.y = element_text(size = 14), axis.title.y = element_text(size = 16),
-            plot.title = element_text(size = 18, face = "bold", color = "black"))
+           color = as.character(input$Group2)) +
+      theme(legend.position="bottom",
+            axis.text.x = element_text(size = 14), 
+            axis.title.x = element_text(size = 16),
+            axis.text.y = element_text(size = 14), 
+            axis.title.y = element_text(size = 16),
+            plot.title = element_text(size = 18, 
+                                      face = "bold", 
+                                      color = "black"))
     
   })
   
   outvar = reactive({
-    myvar = input$independent
+    myvar = input$Group
     unique(treedata[[myvar]])
   })
 
   observe({
-    updateSelectInput(inputId = 'groups', choices = outvar())
+    updateSelectInput(inputId = 'groups', choices = outvar(), selected = outvar())
   })
   
   outvar2 = reactive({
-    myvar2 = input$independent2
+    myvar2 = input$Group2
     unique(treedata[[myvar2]])
   })
   
