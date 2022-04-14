@@ -61,19 +61,28 @@ insertNA_at_timejumps_all_logs <- function(dataframe, sensors, recordInterval, d
 }
 
 
-get_daterange <- function(dataframe) {
-  # Gets earliest and latest date shared in common by all logs
-  dat <- dataframe %>%
-    group_by(Log) %>%
-    select(Log, date) %>%
-    summarise_at(vars(date), list(min=min, max=max))
-  earliest <- dat %>%
-    summarise_at(vars(min), list(date=max))
-  earliest_date <- ymd_hms(earliest$date)
-  latest <- dat %>%
-    summarise_at(vars(max), list(date=min))
-  latest_date <- ymd_hms(latest$date)
-  return(c(date(earliest_date), date(latest_date)))
+get_daterange <- function(dataframe, perlog = FALSE) {
+  # Get earliest and latest date in general (Default)
+  # Get earliest and latest date shared in common by all logs
+  if (perlog == FALSE) {
+    dat <- dataframe %>%
+      select(date) %>%
+      summarise_at(vars(date), list(min=min, max=max))
+    return(c(date(ymd_hms(dat$min)), date(ymd_hms(dat$max))) )
+  } else {
+    dat <- dataframe %>%
+      group_by(Log) %>%
+      select(Log, date) %>%
+      summarise_at(vars(date), list(min=min, max=max))
+    earliest <- dat %>%
+      summarise_at(vars(min), list(date=max))
+    earliest_date <- ymd_hms(earliest$date)
+    latest <- dat %>%
+      summarise_at(vars(max), list(date=min))
+    latest_date <- ymd_hms(latest$date)
+    return(c(date(earliest_date), date(latest_date)))
+  }
+  
 }
 
 
@@ -151,9 +160,9 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          sidebarPanel(
            
            # Select which Log(s) to plot
-           selectInput("Group", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat'), selected = 'Canopy'),
+           selectInput("group", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat'), selected = 'Canopy'),
            
-           selectInput("groups", strong("Select Group(s)"), "", multiple = TRUE),
+           selectInput("subgroup1", strong("Select group(s)"), "", multiple = TRUE),
            
            # Select variable for plot1
            selectInput("var1", strong("Select Variable 1"),
@@ -167,8 +176,10 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
            # Select date range to be plotted
            dateRangeInput("date", strong("Date range"),  
                           min = MIN_DATE, max = MAX_DATE,
-                          start = "2020-07-02 12:45:00 UTC", 
-                          end = "2020-10-27 08:00:00 UTC"),
+                          start = MIN_DATE, end = MAX_DATE),
+           
+           actionButton('resetdate',strong('Reset Date')),
+           
            # Select opacity for plot
            sliderInput("slider1",strong("Opacity"),
                        min = 0, max = 1, value = 0.5)
@@ -192,9 +203,9 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          
          sidebarPanel(
            
-           selectInput("Group2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
+           selectInput("group2", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat')),
            
-           selectInput("groups2", strong("Select Group(s)"), "", multiple = TRUE),
+           selectInput("subgroup2", strong("Select group(s)"), "", multiple = TRUE),
            
            # Select variable 1 for plot
            selectInput("multi1", strong("Select X Axis"),
@@ -242,42 +253,42 @@ server <- function(input, output) {
         How to use:
         <br/>
         <br/>
-        For time based analysis first select the Group variable from the drop down then select which log(s) you want to graph then select variable 1 for the top graph and variable 2 for the bottom graph finally specify the date range you want to be graphed. If you want to zoom into a specific range within the graph you are able to by clicking and dragging to the desired range and double clicking, you will zoom into the desired date range.
+        For time based analysis first select the group variable from the drop down then select which log(s) you want to graph then select variable 1 for the top graph and variable 2 for the bottom graph finally specify the date range you want to be graphed. If you want to zoom into a specific range within the graph you are able to by clicking and dragging to the desired range and double clicking, you will zoom into the desired date range.
         For multivariable analysis you just select the log(s) you want to graph and the variables you want on the x and y axis.', 
       sep="<br/>"))
   })
   
-  daterange <- reactiveValues(x = ymd(c("2020-07-02", "2020-10-27")))
+  daterange <- reactiveValues(x = ymd(c(MIN_DATE, MAX_DATE)))
   
   output$plot1 <- renderPlot({
     
-    if (as.character(input$Group) == 'Log') {
+    if (as.character(input$group) == 'Log') {
       
       subdat <- treedata %>% 
-        rename('Group' = as.character(input$Group)) %>%
-        filter(Group %in% input$groups & name %in% input$var1 & 
+        rename('group' = as.character(input$group)) %>%
+        filter(group %in% input$subgroup1 & name %in% input$var1 & 
                  daterange$x[1] < Date & Date < daterange$x[2])
       
       subdat %>%
-        ggplot(mapping = aes(x = Date, y = value, color = Group)) +
+        ggplot(mapping = aes(x = Date, y = value, color = group)) +
         #geom_point(alpha = input$slider1) + theme_bw() +
         geom_line() + theme_bw() +
-        labs(x = '', y = input$var1, color = input$Group) +
+        labs(x = '', y = input$var1, color = input$group) +
         theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
               axis.title.y = element_text(size = 14), legend.position="right")
     } else {
       
       subdat <- treedata %>% 
-        rename('Group' = as.character(input$Group)) %>%
-        mutate(combined_variables = paste(Group,Log,sep = '-')) %>%
-        filter(Group %in% input$groups & name %in% input$var1 & 
+        rename('group' = as.character(input$group)) %>%
+        mutate(combined_variables = paste(group,Log,sep = '-')) %>%
+        filter(group %in% input$subgroup1 & name %in% input$var1 & 
                  daterange$x[1] < Date & Date < daterange$x[2])
       
       subdat %>%
         ggplot(mapping = aes(x = Date, y = value, color = factor(combined_variables))) +
-        #geom_point(alpha = input$slider1, mapping = aes(shape = Group)) + theme_bw() +
-        geom_line(aes(linetype = Group)) + theme_bw() +
-        labs(x = '', y = input$var1, color = input$Group) +
+        #geom_point(alpha = input$slider1, mapping = aes(shape = group)) + theme_bw() +
+        geom_line(aes(linetype = group)) + theme_bw() +
+        labs(x = '', y = input$var1, color = input$group) +
         theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
               axis.title.y = element_text(size = 14), legend.position="right")
     }
@@ -286,32 +297,32 @@ server <- function(input, output) {
   
   output$plot2 <- renderPlot({
     
-    if (as.character(input$Group) == 'Log') {
+    if (as.character(input$group) == 'Log') {
       
       subdat <- treedata %>% 
-        rename('Group' = as.character(input$Group)) %>%
-        filter(Group %in% input$groups & name %in% input$var2 & 
+        rename('group' = as.character(input$group)) %>%
+        filter(group %in% input$subgroup1 & name %in% input$var2 & 
                  daterange$x[1] < Date & Date < daterange$x[2])
       
       subdat %>% 
-        ggplot(mapping = aes(x = Date, y = value, color = Group)) +
+        ggplot(mapping = aes(x = Date, y = value, color = group)) +
         geom_line() + theme_bw() +
-        labs(x = '', y = input$var2, color = input$Group) +
+        labs(x = '', y = input$var2, color = input$group) +
         theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
               axis.title.y = element_text(size = 14), legend.position="right")
     } else {
       
       subdat <- treedata %>% 
-        rename('Group' = as.character(input$Group)) %>%
-        mutate(combined_variables = paste(Group,Log,sep = '-')) %>%
-        filter(Group %in% input$groups & name %in% input$var2 & 
+        rename('group' = as.character(input$group)) %>%
+        mutate(combined_variables = paste(group,Log,sep = '-')) %>%
+        filter(group %in% input$subgroup1 & name %in% input$var2 & 
                  daterange$x[1] < Date & Date < daterange$x[2])
       
       subdat %>% 
         ggplot(mapping = aes(x = Date, y = value, color = factor(combined_variables))) +
-        geom_line(aes(linetype = Group), size = 0.6) + theme_bw() +
+        geom_line(aes(linetype = group), size = 0.6) + theme_bw() +
         scale_linetype_manual(values=c("solid", "longdash", "dotted", "dotdash","77")) +
-        labs(x = '', y = input$var2, color = input$Group) +
+        labs(x = '', y = input$var2, color = input$group) +
         theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
               axis.title.y = element_text(size = 14), legend.position="right")
     }
@@ -320,15 +331,15 @@ server <- function(input, output) {
   
   output$plotm <- renderPlot({
     TREE_DATA %>% 
-      filter(!!rlang::sym(as.character(input$Group2)) %in% input$groups2) %>%
+      filter(!!rlang::sym(as.character(input$group2)) %in% input$subgroup2) %>%
       ggplot(aes_string(x = as.character(add.backtick(input$multi1)), 
                         y = as.character(add.backtick(input$multi2)), 
-                        color = as.character(input$Group2))) +
+                        color = as.character(input$group2))) +
       geom_point(alpha = input$slider) + theme_bw() +
       labs(title = "Multivariable Relationship", 
            x = as.character((input$multi1)), 
            y = as.character((input$multi2)), 
-           color = as.character(input$Group2)) +
+           color = as.character(input$group2)) +
       theme(legend.position="bottom",
             axis.text.x = element_text(size = 14), 
             axis.title.x = element_text(size = 16),
@@ -340,50 +351,86 @@ server <- function(input, output) {
     
   })
   
-  outvar = reactive({
-    myvar = input$Group
-    unique(treedata[[myvar]])
-  })
-
-  observe({
-    updateSelectInput(inputId = 'groups', choices = outvar(), selected = outvar())
+  # Page 1
+  
+  observeEvent(input$date[1], {daterange$x[1] <- ymd(input$date[1])})
+  
+  observeEvent(input$date[2], {daterange$x[2] <- ymd(input$date[2])})
+  
+  observeEvent(input$resetdate, { # "RESET DATERANGE"
+    daterange$x <- c(as_datetime(MIN_DATE), 
+                     as_datetime(MAX_DATE))
+    updateDateRangeInput(inputId = 'date', 
+      start = as_datetime(daterange$x[1]), 
+      end = as_datetime(daterange$x[2]), 
+      min = MIN_DATE, max = MAX_DATE)
+    })
+  
+  observeEvent(input$plot1_click, { # "BRUSH PLOT 1"
+    brush <- input$plot1_brush
+    daterange$x <- c(as_datetime(input$date[1]), 
+                     as_datetime(input$date[2]))
+    if (!is.null(brush)) {
+      daterange$x <- c(as_datetime(brush$xmin), 
+                       as_datetime(brush$xmax))
+      updateDateRangeInput(inputId = 'date',
+        start = as_datetime(daterange$x[1]), 
+        end = as_datetime(daterange$x[2]), 
+        min = MIN_DATE, max = MAX_DATE)}
   })
   
-  outvar2 = reactive({
-    myvar2 = input$Group2
+  observeEvent(input$plot2_click, { # "BRUSH PLOT 2"
+    brush <- input$plot2_brush
+    daterange$x <- c(as_datetime(input$date[1]), 
+                     as_datetime(input$date[2]))
+    if (!is.null(brush)) {
+      daterange$x <- c(as_datetime(brush$xmin), 
+                       as_datetime(brush$xmax))
+      updateDateRangeInput(inputId = 'date', 
+        start = as_datetime(daterange$x[1]), 
+        end = as_datetime(daterange$x[2]), 
+        min = MIN_DATE, max = MAX_DATE)}
+  })
+  
+  
+  getsubgroup1 = reactive({
+    myvar = input$group
+    unique(treedata[[myvar]])
+  })
+  
+  observe({ # "UPDATE GROUPS PAGE 1"
+    updateSelectInput(
+      inputId = 'subgroup1', 
+      choices = getsubgroup1())
+  })
+  
+  # Page 2
+  getsubgroup2 = reactive({
+    myvar2 = input$group2
     unique(treedata[[myvar2]])
   })
   
-  observe({
-    updateSelectInput(inputId = 'groups2', choices = outvar2())
-  })
-  
-  observeEvent(input$date[1], {daterange$x[1] <- ymd(input$date[1])})
-  observeEvent(input$date[2], {daterange$x[2] <- ymd(input$date[2])})
-  
-  observeEvent(input$plot1_click, {
-    brush <- input$plot1_brush
-    if (!is.null(brush)) {
-      daterange$x <- c(as_datetime(brush$xmin), as_datetime(brush$xmax))
-      updateDateRangeInput(inputId = 'date', start = as_datetime(daterange$x[1]), end = as_datetime(daterange$x[2]), min = MIN_DATE, max = MAX_DATE)
-    } 
-    else {
-      daterange$x <- c(ymd(input$date[1], input$date[2]))
-    }
-  })
-  
-  observeEvent(input$plot2_click, {
-    brush <- input$plot2_brush
-    if (!is.null(brush)) {
-      daterange$x <- c(as_datetime(brush$xmin), as_datetime(brush$xmax))
-      updateDateRangeInput(inputId = 'date', start = as_datetime(daterange$x[1]), end = as_datetime(daterange$x[2]), min = MIN_DATE, max = MAX_DATE)
-    } 
-    else {
-      daterange$x <- c(ymd(input$date[1], input$date[2]))
-    }
+  observe({ # "UPDATE GROUPS PAGE 2"
+    updateSelectInput(
+      inputId = 'subgroup2', 
+      choices = getsubgroup2())
   })
   
 }
 
+# cur_choices = getchoices()
+# cur_selected = sortselected()
+# # If no choices are selected, select first choice
+# if (length(cur_selected) == 0) {
+#   updateSelectInput(inputId = 'subgroup', choices = cur_choices, selected = cur_choices[1])
+# } else {
+#   cur_selected = sortselected()
+#   # If the first selected value is in choices, then sort selected
+#   if (!cur_selected[1] %in% cur_choices) {
+#     updateSelectInput(inputId = 'subgroup', choices = cur_choices, selected = sortselected())
+#   } else { # If first selected value is not in choices, then set selected value to first choice
+#     updateSelectInput(inputId = 'subgroup', choices = cur_choices, selected = cur_choices[1])
+#   }
+# }
 # Create Shiny object
 shinyApp(ui = ui, server = server, options = list(height = 800))
