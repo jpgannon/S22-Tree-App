@@ -228,7 +228,32 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
            h4('Drag Across Plot, then Double Click to Zoom In Section')
          )
        )
-    )
+    ),
+    
+    # Create Summary Analysis tab
+    tabPanel('Summary Analysis',
+             titlePanel("Summary Analysis"),
+             sidebarLayout(
+               
+               sidebarPanel(
+                 
+                 # Select which Log(s) to plot
+                 selectInput("group3", strong("Color Points By:"), choices = c('Log','Canopy','SilvTreat','LogTreat'), selected = 'Canopy'),
+                 
+                 selectInput("subgroup3", strong("Select group(s)"), "", multiple = TRUE),
+                 
+                 # Select variable for plotsummary
+                 selectInput("var3", strong("Select Variable"),
+                             choices = unique(treedata$name), 
+                             selected = unique(treedata$name)[2])
+                 
+               ),
+               
+               mainPanel(
+                 plotOutput("plotsummary", width = "100%")
+               )
+             )
+        )
   )
 )
 
@@ -254,7 +279,12 @@ server <- function(input, output) {
         <br/>
         <br/>
         For time based analysis first select the group variable from the drop down then select which log(s) you want to graph then select variable 1 for the top graph and variable 2 for the bottom graph finally specify the date range you want to be graphed. If you want to zoom into a specific range within the graph you are able to by clicking and dragging to the desired range and double clicking, you will zoom into the desired date range.
-        For multivariable analysis you just select the log(s) you want to graph and the variables you want on the x and y axis.', 
+        For multivariable analysis you just select the log(s) you want to graph and the variables you want on the x and y axis. For the summary analysis, select the desired catagories, and you will be able to view and compare boxplots.
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        Created by Trey Valenta, Kelvin Rivas, Cole Jackson, and Augene Lee', 
       sep="<br/>"))
   })
   
@@ -351,6 +381,27 @@ server <- function(input, output) {
     
   })
   
+  #Summary Analysis Page 3 - Boxplots
+  
+  output$plotsummary <- renderPlot({
+    TREE_DATA %>%
+      filter(!!rlang::sym(as.character(input$group3)) %in% input$subgroup3) %>%
+      ggplot(aes_string(y = as.character(add.backtick(input$var3)), 
+                        fill = as.character(input$group3))) +
+      geom_boxplot() + 
+      theme_bw() +
+      labs(title = "Summary", 
+           color = as.character(input$group3)) +
+      theme(legend.position="bottom",
+            axis.text.x = element_text(size = 14),
+            axis.title.x = element_text(size = 16),
+            axis.text.y = element_text(size = 14),
+            axis.title.y = element_text(size = 16),
+            plot.title = element_text(size = 18,
+                                      face = "bold",
+                                      color = "black"))
+  })
+  
   # Page 1
   
   observeEvent(input$date[1], {daterange$x[1] <- ymd(input$date[1])})
@@ -414,6 +465,19 @@ server <- function(input, output) {
     updateSelectInput(
       inputId = 'subgroup2', 
       choices = getsubgroup2())
+  })
+  
+  #Page 3
+  
+  getsubgroup3 = reactive({
+    myvar3 = input$group3
+    unique(treedata[[myvar3]])
+  })
+  
+  observe({ # "UPDATE GROUPS PAGE 3"
+    updateSelectInput(
+      inputId = 'subgroup3',
+      choices = getsubgroup3())
   })
   
 }
