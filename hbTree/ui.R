@@ -250,7 +250,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
                ),
                
                mainPanel(
-                 plotOutput("plotsummary", width = "100%")
+                 plotOutput("plotsummary")
                )
              )
         )
@@ -386,7 +386,8 @@ server <- function(input, output) {
   output$plotsummary <- renderPlot({
     TREE_DATA %>%
       filter(!!rlang::sym(as.character(input$group3)) %in% input$subgroup3) %>%
-      ggplot(aes_string(y = as.character(add.backtick(input$var3)), 
+      ggplot(aes_string(x = as.character(add.backtick(input$group3)),
+                        y = as.character(add.backtick(input$var3)), 
                         fill = as.character(input$group3))) +
       geom_boxplot() + 
       theme_bw() +
