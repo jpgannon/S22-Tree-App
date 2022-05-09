@@ -2,7 +2,7 @@ library(tidyverse)
 library(dplyr)
 library(lubridate)
 
-
+#create dataset for data processing
 create_dataset <- function(folder_location) {
   all_logs <- data.frame()
   file_list = list.files(path=folder_location)

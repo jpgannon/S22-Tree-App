@@ -153,6 +153,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          )
      ),
 
+    #Create Time Based Analysis Tab
     tabPanel('Time Based Analysis',
        titlePanel("Time Based Analysis"),
        sidebarLayout(
@@ -224,8 +225,7 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
          mainPanel(
            
            # Create brushing functionality 
-           plotOutput("plotm", width="600px", height = "600px"),
-           h4('Drag Across Plot, then Double Click to Zoom In Section')
+           plotOutput("plotm", width="600px", height = "600px")
          )
        )
     ),
@@ -261,6 +261,9 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
 # Define server function
 server <- function(input, output) {
   
+  #Home Page
+  
+  #Write introduction and how to use text
   output$text <- renderText({
     HTML(paste(
       '',
@@ -288,8 +291,12 @@ server <- function(input, output) {
       sep="<br/>"))
   })
   
+  #Time Based Analysis Page 1
+  
+  #create daterange for plot1 and plot2
   daterange <- reactiveValues(x = ymd(c(MIN_DATE, MAX_DATE)))
   
+  #create plot 1 of timeseries graph
   output$plot1 <- renderPlot({
     
     if (as.character(input$group) == 'Log') {
@@ -301,7 +308,6 @@ server <- function(input, output) {
       
       subdat %>%
         ggplot(mapping = aes(x = Date, y = value, color = group)) +
-        #geom_point(alpha = input$slider1) + theme_bw() +
         geom_line() + theme_bw() +
         labs(x = '', y = input$var1, color = input$group) +
         theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
@@ -316,7 +322,6 @@ server <- function(input, output) {
       
       subdat %>%
         ggplot(mapping = aes(x = Date, y = value, color = factor(combined_variables))) +
-        #geom_point(alpha = input$slider1, mapping = aes(shape = group)) + theme_bw() +
         geom_line(aes(linetype = group)) + theme_bw() +
         labs(x = '', y = input$var1, color = input$group) +
         theme(axis.text.y = element_text(angle = 90, hjust=0.5, size = 14), 
@@ -325,6 +330,7 @@ server <- function(input, output) {
 
   })
   
+  #create plot2 of timeseries graph
   output$plot2 <- renderPlot({
     
     if (as.character(input$group) == 'Log') {
@@ -359,6 +365,9 @@ server <- function(input, output) {
   
   })
   
+  #Multivariable Analysis Page 2
+  
+  #create multivariable plot
   output$plotm <- renderPlot({
     TREE_DATA %>% 
       filter(!!rlang::sym(as.character(input$group2)) %in% input$subgroup2) %>%
@@ -383,6 +392,7 @@ server <- function(input, output) {
   
   #Summary Analysis Page 3 - Boxplots
   
+  #create summary  boxplot
   output$plotsummary <- renderPlot({
     TREE_DATA %>%
       filter(!!rlang::sym(as.character(input$group3)) %in% input$subgroup3) %>%
@@ -418,6 +428,7 @@ server <- function(input, output) {
       min = MIN_DATE, max = MAX_DATE)
     })
   
+  #Create brush tool
   observeEvent(input$plot1_click, { # "BRUSH PLOT 1"
     brush <- input$plot1_brush
     daterange$x <- c(as_datetime(input$date[1]), 
@@ -457,6 +468,7 @@ server <- function(input, output) {
   })
   
   # Page 2
+  
   getsubgroup2 = reactive({
     myvar2 = input$group2
     unique(treedata[[myvar2]])
@@ -483,19 +495,5 @@ server <- function(input, output) {
   
 }
 
-# cur_choices = getchoices()
-# cur_selected = sortselected()
-# # If no choices are selected, select first choice
-# if (length(cur_selected) == 0) {
-#   updateSelectInput(inputId = 'subgroup', choices = cur_choices, selected = cur_choices[1])
-# } else {
-#   cur_selected = sortselected()
-#   # If the first selected value is in choices, then sort selected
-#   if (!cur_selected[1] %in% cur_choices) {
-#     updateSelectInput(inputId = 'subgroup', choices = cur_choices, selected = sortselected())
-#   } else { # If first selected value is not in choices, then set selected value to first choice
-#     updateSelectInput(inputId = 'subgroup', choices = cur_choices, selected = cur_choices[1])
-#   }
-# }
 # Create Shiny object
 shinyApp(ui = ui, server = server, options = list(height = 800))
